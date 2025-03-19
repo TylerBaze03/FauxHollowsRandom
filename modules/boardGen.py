@@ -14,7 +14,7 @@ import time
 #['X','X','X','X','X','X'],
 #['X','X','X','X','X','X'],
 #['X','X','X','X','@','X'],
-#['X','@','X','X','X','X']
+#['X','@','X','X','X','X'],
 
 
 #Now start the present case than actually taking inoput from user
