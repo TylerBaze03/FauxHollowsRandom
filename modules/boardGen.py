@@ -1,5 +1,7 @@
 import random
 import time
+from copy import deepcopy
+
 
 # # == to scissors, @ == unplaceable, ! == to present, X == placeable, * == faux
 #['X','X','X','X','X','X'],
@@ -24,536 +26,366 @@ import time
 #x and y are swapped but its too far in to fix this :(
 
 
+testVar = 0
 
 
 boardDim = 6
-board1 = [['X','X','X','X','X','X'],['X','X','@','X','X','X'],['X','X','X','X','@','X'],['X','X','X','X','X','@'],['X','@','X','X','X','X'],['X','X','X','@','X','X']]
-board2 = [['X','X','@','X','X','X'],['X','X','X','X','@','X'],['X','X','X','X','X','X'],['X','X','X','X','X','X'],['X','X','X','X','@','X'],['X','@','X','X','X','X']]
-allBoards = [board1, board2]
+BOARD1 = [['X','X','X','X','X','X'],['X','X','@','X','X','X'],['X','X','X','X','@','X'],['X','X','X','X','X','@'],['X','@','X','X','X','X'],['X','X','X','@','X','X']]
+BOARD2 = [['X','X','@','X','X','X'],['X','X','X','X','@','X'],['X','X','X','X','X','X'],['X','X','X','X','X','X'],['X','X','X','X','@','X'],['X','@','X','X','X','X']]
+ALLBOARDS = [BOARD1, BOARD2]
 #list of what you dont want to overwrite
 nonos = ['@', '#', '!']
 
 #dfs cords for scissors
-cordsRowS = [0,1,0,-1,0,2,0,-2]
-cordsColS = [-1,0,1,0,-2,0,2,0]
+    #        0 1  2  3 4  5  6  7  8  9  10 11 12 13 14 15 16  17  18  19  20
+CORDSROWSCI = [0,-1,-1,0,1, 1, 1, 0,-1,-2,-2,-2,-1, 0, 1, 2, 2,  2,  1,  0, -1]
+CORDSCOLSCI = [0,0 , 1,1,1, 0,-1,-1,-1,-1, 0, 1, 2, 2, 2, 1, 0, -1, -2, -2, -2]
 
 #dfs coords for present
-cordsRowP = [0,1,0,-1,1,-1,1,-1]
-cordsColP = [-1,0,1,0,1,-1,-1,1]
+    #        0 1  2  3 4  5  6  7  8
+CORDSROWPRES = [0,-1,-1,0,1, 1, 1, 0,-1]
+CORDSCOLPRES = [0, 0, 1,1,1, 0,-1,-1,-1]
 
 #shouldnt be used outside of testing this specific py file
 def printBoard(playBoard):
     for count, ele in enumerate(playBoard):
         print(count, ele)
 
-#this should really be rewritten       
-def bounds(x, y, playBoard, type):
-    #the type var tells whether it is 0, for rectangle (scissors) or 1 for a square (present)
 
-    #tells eiterh scissors or present or even faux selector where it can build, either left or right, up or down
-    #possibly could return a list first val being wther it can go left or right and 2nd val being whethere up or down
-    #returns -1 if it is a failed vertex, 0 if it is a build right2 down1 and 1 if it is a build right2 up1 case, 2 if it is build left2 and down1 and 3 if build left2 and up1, 
-    #returns 4 if build right1 down2, 5 if build right1 up3, 6 if build left1 down3, 7 if build left1 up3
+#this should really be rewritten      
+#vis = [[False for i in range(boardDim)] for j in range(boardDim)]
+
+
+#Creates a used array of all visited points around the vertex than allows us to creates the object based off of it
+#Figure 1 Scissors Search Area
+#    9  10 11
+#20  8  1  2  12
+#19  7  0  3  13
+#18  6  5  4  14
+#    17 16 15 
+
+
+#legend:
+#the numbers above each if statement tell which statement it is checking for whithin the above figure
+def makeSci (x,y,playBoard):
+    visitedSci = [False for i in range(len(CORDSROWSCI))]
     vertex = playBoard[x][y]
+    #first checking the input given and returning immedietly
     if vertex in nonos:
-        print("0")
-        print(vertex)
         return -1
-    #cases where x is on far right and we are building to horizontally 3x2
-    if (x + 1) < 6 and playBoard[x+1][y] not in nonos:
-        #x is on the far right
-        if type == 0 and (y + 2) < 6 and playBoard[x][y+1] not in nonos and playBoard[x][y+2] not in nonos and playBoard[x+1][y+1] not in nonos and playBoard[x+1][y+2] not in nonos :
-            #building to the right down from the top left corner a 3x2 rectangle
-            return 0
-        elif type == 0 and (y - 2) >= 0 and playBoard[x][y-1] not in nonos and playBoard[x][y-2] not in nonos and playBoard[x+1][y-1] not in nonos and playBoard[x+1][y-2] not in nonos :
-            #building to the right up from the top left corner a 3x2 rectangle
-            return 1
-            
-        #now for the square checks
-        if type == 1 and (y + 1) < 6 and playBoard[x][y+1] not in nonos and playBoard[x+1][y+1] not in nonos :
-            #building to the right down from the top left corner a 3x2 rectangle
-            return 0
-        elif type == 1 and (y - 1) >= 0 and playBoard[x][y-1] not in nonos and playBoard[x+1][y-1] not in nonos:
-            #building to the right up from the top left corner a 3x2 rectangle
-            return 1
-
-    if (x-1) >= 0 and playBoard[x-1][y] not in nonos :
-        #case where x is on far left
-        if type == 0 and (y + 2) < 6 and playBoard[x][y+1] not in nonos and playBoard[x][y+2] not in nonos and playBoard[x-1][y+1] not in nonos and playBoard[x-1][y+2] not in nonos :
-            #building up and to the right a 3x2 rectangle or 2x2 square
-            return 2
-        elif type == 0 and (y - 2) >= 0 and playBoard[x][y-1] not in nonos and playBoard[x][y-2] not in nonos and playBoard[x-1][y-1] not in nonos and playBoard[x-1][y-2] not in nonos :
-            #building down and to the left a 3x2 rectangle
-            return 3
-        
-        #now for the square checks
-        if type == 1 and (y + 1) < 6 and playBoard[x][y+1] not in nonos and playBoard[x-1][y+1] not in nonos :
-            #building up and to the right a 3x2 rectangle or 2x2 square
-            return 2
-        elif type == 1 and (y - 1) >= 0 and playBoard[x][y-1] not in nonos and playBoard[x-1][y-1] not in nonos:
-            #building down and to the left a 3x2 rectangle
-            return 3
-
-    #case where x is on far right and we are building down 2x3
-    if type == 0 and (x+2) < 6 and playBoard[x+2][y] not in nonos  and playBoard[x+1][y] not in nonos :
-        if playBoard[x+2][y] not in nonos  and playBoard[x+2][y+1] not in nonos  and playBoard[x+1][y+1] not in nonos  and playBoard[x][y+1] not in nonos :
-            #building to the right and down from the top left corner a 2x3 rectangle
-            return 4
-        elif playBoard[x+2][y] not in nonos  and playBoard[x+2][y-1] not in nonos  and playBoard[x+1][y-1] !='@'and playBoard[x][y-1] not in nonos :
-            #building to the right and up from the top left corner a 2x3 rectangle
-            return 5
-    if type == 0 and (x-2) >=0 and playBoard[x-2][y] not in nonos and playBoard[x+1][y] not in nonos :
-        if playBoard[x-2][y+1] not in nonos  and playBoard[x-1][y+1] not in nonos and playBoard[x][y+1] not in nonos :
-            #building down and to the left  corner a 2x3 rectanlge
-            return 6
-        elif playBoard[x-2][y-1] not in nonos  and playBoard[x-2][y-1] not in nonos  and playBoard[x][y-1] not in nonos :
-            #building up and to the left  corner a 2x3 rectanlge
-            return 7
     else:
-        return -1
-
-vis = [[False for i in range(boardDim)] for j in range(boardDim)]
-
-def isValid(row, col, playBoard):
-    #out of bounds
-    if(row < 0 or col < 0 or row > boardDim or col > boardDim):
-        return False
-    
-    #already visited
-    if(vis[row][col]):
-        return False
-    #is occupied by an invalid char
-    if(playBoard[row][col] in nonos):
-        return False
-    
-    return True
-
-
-#the type var tells whether it is 0 for rectangle (scissors) or 1 for a square (present)
-def dfs(x, y, playBoard, type):
-    st = [x, y]
-    
-    
-    if type == 0:
-        while (len(st) > 0):
-            cur = st[len(st)-1]
-            st.remove(st[len(st)-1])
-            row = cur[0]
-            col = cur[1]
-            
-            if (isValid(row, col) == False):
-                return -1
-            
-            vis[row][col] = True
-            
-            for i in range(8):
-                adjx = row + cordsRowP[i]
-                adjy = col + cordsColP[i]
-                st.append([adjx, adjy])
+        visitedSci[0] = True
+    #for loop to fill the vis array 
+    for i in range(len(CORDSROWSCI)-1):
+        if ((x + CORDSROWSCI[i]) >= boardDim or (x + CORDSROWSCI[i]) < 0 or (y + CORDSCOLSCI[i]) >= boardDim or (y + CORDSCOLSCI[i]) < 0):
+            visitedSci[i] = False
+        else:
+            vertex = playBoard[x+CORDSROWSCI[i]][y + CORDSCOLSCI[i]]
+            if vertex in nonos:
+                visitedSci[i] = False
+            else:
+                visitedSci[i] = True
+    #0,1,2,3
+    if (visitedSci[1] != False != False and visitedSci[2] != False != False and visitedSci[3] != False):
+        #10,11
+        if(visitedSci[10] != False and visitedSci[11] != False):
+            playBoard[x][y] = "#"      #0
+            playBoard[x-1][y] = "#"    #1
+            playBoard[x-1][y+1]= "#"   #2
+            playBoard[x][y+1]= "#"     #3
+            playBoard[x-2][y] = "#"    #10
+            playBoard[x-2][y+1] = "#"   #11
+            return playBoard
+        #12,13
         
+        elif(visitedSci[12] != False and visitedSci[13] != False):
+            playBoard[x][y] = "#"      #0
+            playBoard[x-1][y] = "#"    #1
+            playBoard[x-1][y+1]= "#"   #2
+            playBoard[x][y+1]= "#"     #3
+            playBoard[x-1][y+2] = "#"  #12
+            playBoard[x][y+2] = "#"    #13
+            return playBoard
+    
+    #0,3,4,5
+    if(visitedSci[3] != False and visitedSci[4] != False and visitedSci[5] != False):
+        #13,14
+        if(visitedSci[13] != False and visitedSci[14] != False):
+            playBoard[x][y]= "#"       #0
+            playBoard[x][y+1]= "#"     #3
+            playBoard[x+1][y+1]= "#"   #4
+            playBoard[x+1][y]= "#"     #5 
+            playBoard[x][y+2] = "#"    #13
+            playBoard[x+1][y+2] = "#"  #14
+            return playBoard
+        #15,16
+        elif(visitedSci[15] != False and visitedSci[16] != False):
+            playBoard[x][y]= "#"       #0
+            playBoard[x][y+1]= "#"     #3
+            playBoard[x+1][y+1]= "#"   #4
+            playBoard[x+1][y]= "#"     #5 
+            playBoard[x+2][y+1] = "#"  #15
+            playBoard[x+2][y] = "#"    #16
+            return playBoard
+    #0,5,6,7
+    if(visitedSci[5] != False and visitedSci[6] != False and visitedSci[7] != False ):
+        #16,17
+        if(visitedSci[16] != False and visitedSci[17] != False):
+            playBoard[x][y] = "#"      #0
+            playBoard[x+1][y] = "#"    #5
+            playBoard[x+1][y-1]= "#"   #6
+            playBoard[x][y-1] = "#"    #7
+            playBoard[x+2][y] = "#"    #16
+            playBoard[x+2][y-1] = "#"  #17
+            return playBoard
+        #18,19
+        elif(visitedSci[18] != False and visitedSci[19] != False):
+            playBoard[x][y] = "#"      #0
+            playBoard[x+1][y] = "#"    #5
+            playBoard[x+1][y-1]= "#"   #6
+            playBoard[x][y-1] = "#"    #7
+            playBoard[x+1][y-2] = "#"  #18
+            playBoard[x][y-2] = "#"    #19
+            return playBoard
+    #0,7,8,1,
+    if(visitedSci[7] != False and visitedSci[8] != False and visitedSci[1] != False):
+        #19,20
+        if(visitedSci[19] != False and visitedSci[20] != False):
+            playBoard[x][y]= "#"       #0
+            playBoard[x-1][y]= "#"     #7
+            playBoard[x-1][y-1]= "#"   #8
+            playBoard[x][y-1]= "#"     #1
+            playBoard[x][y-2] = "#"    #19
+            playBoard[x-1][y-2] = "#"  #20
+            return playBoard
         
-    elif type == 1:
-        while (len(st) > 0):
-            cur = st[len(st)-1]
-            st.remove(st[len(st)-1])
-            row = cur[0]
-            col = cur[1]
-            
-            if (isValid(row, col) == False):
-                return -1
-            
-            vis[row][col] = True
-            
-            for i in range(4):
-                adjx = row + cordsRowP[i]
-                adjy = col + cordsColP[i]
-                st.append([adjx, adjy])
-        
+        #9,10
+        elif(visitedSci[9] != False and visitedSci[10] != False):
+            playBoard[x][y]= "#"       #0
+            playBoard[x-1][y]= "#"     #7
+            playBoard[x-1][y-1]= "#"   #8
+            playBoard[x][y-1]= "#"     #1
+            playBoard[x-2][y-1] = "#"  #9
+            playBoard[x-2][y] = "#"    #10
+            return playBoard
+    
+    return -1
 
+if(testVar == 1):
+    printBoard(ALLBOARDS[0])
+    print("@@@@@@@@@@@@@@@@@@@\n")
+    testA = ALLBOARDS[0]
+    testA = makeSci(0,0,testA)
+    if testA == -1:
+        print("Failed")
     else:
-        return -1
+        #print(testB)
+        printBoard(testA)
 
 
 #indexes in the visited array around the vertex
-#todo: finish rest and test, this shoudl work i think
+#Creates a used array of all visited points around the vertex than allows us to creates the object based off of it
+#Figure 2 Present Search Area
+#8  1  2 
+#7  0  3
+#6  5  4
 
-#9  1  2 
-#8  0  3
-#7  6  4
-visitedPr = [False for i in range(9)]
-
+#legend:
+#same as scissors, the numbers above each if statement tell which statement it is checking for with in the above figure
 def makePres(x,y,playBoard):
+    visitedPr = [False for i in range(9)]
     vertex = playBoard[x][y]
     if vertex in nonos:
         return -1
     else:
         visitedPr[0] = True
         
-    for i in range(cordsRowP):
-        if vertex in nonos:
+    #for loop to fill the vis array 
+    for i in range(len(CORDSROWPRES)):
+        if ((x + CORDSROWPRES[i]) > boardDim or (x + CORDSROWPRES[i]) < 0):
+            visitedPr[i] = False
+        elif ((y + CORDSCOLPRES[i]) > boardDim or (y + CORDSCOLPRES[i]) < 0):
             visitedPr[i] = False
         else:
-            visitedPr[0] = True
+            vertex = playBoard[x+CORDSROWPRES[i]][y + CORDSCOLPRES[i]]
+            if vertex in nonos:
+                visitedPr[i] = False
+            else:
+                visitedPr[i] = True
+    
     if(visitedPr[1] != False and visitedPr[2] != False and visitedPr[3] !=False):
-        playBoard[x][y] = "!"
-        playBoard[x-1][y]
-        playBoard[x-1][y+1]
-        playBoard[x][y+1]
+        playBoard[x][y] = "!"      #0
+        playBoard[x-1][y] = "!"    #1
+        playBoard[x-1][y+1]= "!"   #2
+        playBoard[x][y+1]= "!"     #3
+        return playBoard
     elif(visitedPr[3] != False and visitedPr[4] != False and visitedPr[5] !=False):
-        playBoard[x][y]
-        playBoard[x][y+1]
-        playBoard[x+1][y+1]
-        playBoard[x+1][y]
-    elif(visitedPr[i] != False and visitedPr[i] != False and visitedPr[i] !=False):
-        playBoard[x][y]
-        playBoard[x][y]
-        playBoard[x][y]
-        playBoard[x][y]
-    elif(visitedPr[i] != False and visitedPr[i] != False and visitedPr[i] !=False):
-        playBoard[x][y]
-        playBoard[x][y]
-        playBoard[x][y]
-        playBoard[x][y]
-    else:
-        return -1
-
-
-def boundsScissors(x, y, playBoard):
-    vertex = playBoard[x][y]
-    if vertex in nonos:
-        print("0")
-        print(vertex)
-        return -1
-    
-    #IMPORTANT
-    #these next if statements (the bulk of this function) will follow a similar structure of checking first if the x than y (+- 1 or 2 for x than y)are out of bounds than checking if they are invalid characters to place over 
-    
-    #checking is building "down" and to the "right" is possible vertically meaning x will have the +2
-    #vertical Copy point
-    if (x+2) <= boardDim and (y+1) <=boardDim and playBoard[x][y] != "@" and playBoard[x+1][y] != "@" and playBoard[x+2][y] != "@" and playBoard[x][y+1] != "@" and playBoard[x+1][y+1] != "@" and playBoard[x+2][y+1] != "@":
-        playBoard[x][y] = "#"
-        playBoard[x+1][y] = "#"
-        playBoard[x+2][y] = "#"
-        playBoard[x][y+1] = "#"
-        playBoard[x+1][y+1] = "#"
-        playBoard[x+2][y+1] = "#"
+        playBoard[x][y]= "!"       #0
+        playBoard[x][y+1]= "!"     #3
+        playBoard[x+1][y+1]= "!"   #4
+        playBoard[x+1][y]= "!"     #5 
         return playBoard
-    #horizontal copy point
-    #checking is building "down" and to the "right" is possible horizontally meaning y will have the +2
-    elif (x+1) <= boardDim and (y+2) <=boardDim and playBoard[x][y] != "@" and playBoard[x+1][y] != "@" and playBoard[x][y+1] != "@" and playBoard[x+1][y+1] != "@" and playBoard[x][y+2] != "@" and playBoard[x+1][y+2] != "@":
-        playBoard[x][y] = "#"
-        playBoard[x+1][y] = "#"
-        playBoard[x][y+1] = "#"
-        playBoard[x][y+2] = "#"
-        playBoard[x+1][y+1] = "#"
-        playBoard[x+1][y+2] = "#"
+    elif(visitedPr[5] != False and visitedPr[6] != False and visitedPr[7] !=False):
+        playBoard[x][y] = "!"      #0
+        playBoard[x+1][y] = "!"    #5
+        playBoard[x+1][y-1]= "!"   #6
+        playBoard[x][y-1] = "!"    #7
         return playBoard
-    
-    #checking if building down and to the "left" is possible vertically
-    elif (x+1) <= boardDim and (y-1) >0 and playBoard[x+1][y] not in nonos and playBoard[x][y-1] not in nonos and playBoard[x+1][y-1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x+1][y] = "!"
-        playBoard[x][y-1] = "!"
-        playBoard[x+1][y-1] = "!"
-        return playBoard
-    #checking if building "up" and to the "right" is possible
-    elif(x-1) >0 and (y+1) <=boardDim and playBoard[x-1][y] not in nonos and playBoard[x][y+1] not in nonos and playBoard[x-1][y+1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x-1][y] = "!"
-        playBoard[x][y+1] = "!"
-        playBoard[x-1][y+1] = "!"
-        return playBoard
-    #checking is building "up" and to the "left" is possible
-    elif(x-1) >0 and (y-1) >0 and playBoard[x-1][y] not in nonos and playBoard[x][y-1] not in nonos and playBoard[x-1][y-1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x-1][y] = "!"
-        playBoard[x][y-1] = "!"
-        playBoard[x-1][y-1] = "!"
+    elif(visitedPr[7] != False and visitedPr[8] != False and visitedPr[1] !=False):
+        playBoard[x][y]= "!"       #0
+        playBoard[x-1][y]= "!"     #7
+        playBoard[x-1][y-1]= "!"   #8
+        playBoard[x][y-1]= "!"     #1
         return playBoard
     else:
         return -1
 
-def boundsPresent(x,y,playBoard):
-    vertex = playBoard[x][y]
-    if vertex in nonos:
-        print("0")
-        print(vertex)
-        return -1
-    
-    #IMPORTANT
-    #these next if statements (the bulk of this function) will follow a similar structure of checking first if the x than y are out of bounds than checking if they are invalid characters to place over
-    
-    #checking is building "down" and to the "right" is possible
-    if (x+1) <= boardDim and (y+1) <=boardDim and playBoard[x+1][y] not in nonos and playBoard[x][y+1] not in nonos and playBoard[x+1][y+1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x+1][y] = "!"
-        playBoard[x][y+1] = "!"
-        playBoard[x+1][y+1] = "!"
-        return playBoard
-    #checking if building down and to the "left" is possible
-    elif (x+1) <= boardDim and (y-1) >0 and playBoard[x+1][y] not in nonos and playBoard[x][y-1] not in nonos and playBoard[x+1][y-1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x+1][y] = "!"
-        playBoard[x][y-1] = "!"
-        playBoard[x+1][y-1] = "!"
-        return playBoard
-    #checking if building "up" and to the "right" is possible
-    elif(x-1) >0 and (y+1) <=boardDim and playBoard[x-1][y] not in nonos and playBoard[x][y+1] not in nonos and playBoard[x-1][y+1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x-1][y] = "!"
-        playBoard[x][y+1] = "!"
-        playBoard[x-1][y+1] = "!"
-        return playBoard
-    #checking is building "up" and to the "left" is possible
-    elif(x-1) >0 and (y-1) >0 and playBoard[x-1][y] not in nonos and playBoard[x][y-1] not in nonos and playBoard[x-1][y-1] not in nonos:
-        playBoard[x][y] = "!"
-        playBoard[x-1][y] = "!"
-        playBoard[x][y-1] = "!"
-        playBoard[x-1][y-1] = "!"
-        return playBoard
+if(testVar == 1):
+    print("@@@@@@@@@@@@@@@@@@@\n")
+    printBoard(ALLBOARDS[0])
+    testB = ALLBOARDS[0]
+    testB = makePres(3,3,testB)
+    if testB == -1:
+            print("Failed")
     else:
-        return -1
-    
+        #print(testB)
+        printBoard(testB)
+
+
+
+
 
 
 def boundsFaux(x,y,playBoard):
     vertex = playBoard[x][y]
     if vertex in nonos:
-        print("0")
-        print(vertex)
         return -1
     
-        
 
-
-def scissors(playBoard, ind_x, ind_y, k):
-    newboard = playBoard
-    fail = -1
-
-    #x coord of position for scissors
-    row = playBoard[ind_x]
-    #y coord of position for scissors
-    col = row[ind_y]
-    vertex = playBoard[ind_x][ind_y]
-    #print(bounds(ind_x, ind_y, newboard, 0))
-    if k >= 0:
-        #if starting point vertex is a unplaceable or if 
-        if bounds(ind_x, ind_y, newboard, 0) < 0:
-            #print("0")
-            #print(vertex)
-            return fail
-        #i hate this, surely the 2x2 will look nicer 
-        bounds(ind_x, ind_y, newboard, 0)
-        match(bounds(ind_x, ind_y, newboard, 0)):
-            #horizontal fill 
-            case 0:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x][ind_y+1] = '#'
-                newboard[ind_x][ind_y+2] = '#'
-                newboard[ind_x+1][ind_y] = '#'
-                newboard[ind_x+1][ind_y+1] = '#'
-                newboard[ind_x+1][ind_y+2] = '#'
-            case 1:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x][ind_y-1] = '#'
-                newboard[ind_x][ind_y-2] = '#'
-                newboard[ind_x+1][ind_y] = '#'
-                newboard[ind_x+1][ind_y-1] = '#'
-                newboard[ind_x+1][ind_y-2] = '#'
-            case 2:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x][ind_y+1] = '#'
-                newboard[ind_x][ind_y+2] = '#'
-                newboard[ind_x-1][ind_y] = '#'
-                newboard[ind_x-1][ind_y+1] = '#'
-                newboard[ind_x-1][ind_y+2] = '#'
-            case 3:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x][ind_y-1] = '#'
-                newboard[ind_x][ind_y-2] = '#'
-                newboard[ind_x-1][ind_y] = '#'
-                newboard[ind_x-1][ind_y-1] = '#'
-                newboard[ind_x-1][ind_y-2] = '#'
-            #now begin the vertical fill
-            case 4:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x+1][ind_y] = '#'
-                newboard[ind_x+2][ind_y] = '#'
-                newboard[ind_x][ind_y+1] = '#'
-                newboard[ind_x+1][ind_y+1] = '#'
-                newboard[ind_x+2][ind_y+1] = '#'
-            case 5:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x+1][ind_y] = '#'
-                newboard[ind_x+2][ind_y] = '#'
-                newboard[ind_x][ind_y-1] = '#'
-                newboard[ind_x+1][ind_y-1] = '#'
-                newboard[ind_x+2][ind_y-1] = '#'
-            case 6:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x-1][ind_y] = '#'
-                newboard[ind_x-2][ind_y] = '#'
-                newboard[ind_x][ind_y+1] = '#'
-                newboard[ind_x-1][ind_y+1] = '#'
-                newboard[ind_x-2][ind_y+1] = '#'
-            case 7:
-                newboard[ind_x][ind_y] = '#'
-                newboard[ind_x-1][ind_y] = '#'
-                newboard[ind_x-2][ind_y] = '#'
-                newboard[ind_x][ind_y-1] = '#'
-                newboard[ind_x-1][ind_y-1] = '#'
-                newboard[ind_x-2][ind_y-1] = '#'
-            case _:
-                #print("0")
-                #print(vertex)
-                return fail
-    return newboard
-
-'''
-This function is defunct by the boundsPresent function, probably for the better
-
-def presentBox(playBoard, ind_x, ind_y, k):
-    newboard = playBoard
-    fail = -1
-
-    #x coord of position for scissors
-    row = playBoard[ind_x]
-    #y coord of position for scissors
-    col = row[ind_y]
-    vertex = playBoard[ind_x][ind_y]
-    #print(bounds(ind_x, ind_y, newboard))
-    if k >= 0:
-        #if starting point vertex is a unplaceable or if 
-        if bounds(ind_x, ind_y, newboard,1) < 0:
-            #print("0")
-            #print(vertex)
-            return fail
-        
-        bounds(ind_x, ind_y, newboard,1)
-        match(bounds(ind_x, ind_y, newboard,1)):
-            #horizontal fill 
-            case 0:
-                newboard[ind_x][ind_y] = '!'
-                newboard[ind_x][ind_y+1] = '!'
-                newboard[ind_x+1][ind_y] = '!'
-                newboard[ind_x+1][ind_y+1] = '!'
-            case 1:
-                newboard[ind_x][ind_y] = '!'
-                newboard[ind_x][ind_y-1] = '!'
-                newboard[ind_x+1][ind_y] = '!'
-                newboard[ind_x+1][ind_y-1] = '!'
-            case 2:
-                newboard[ind_x][ind_y] = '!'
-                newboard[ind_x][ind_y+1] = '!'
-                newboard[ind_x-1][ind_y] = '!'
-                newboard[ind_x-1][ind_y+1] = '!'
-            case 3:
-                newboard[ind_x][ind_y] = '!'
-                newboard[ind_x][ind_y-1] = '!'
-                newboard[ind_x-1][ind_y] = '!'
-                newboard[ind_x-1][ind_y-1] = '!'
-            case _:
-                #print("0")
-                #print(vertex)
-                return fail
-    return newboard
-
-'''
-
-def faux(playBoard, ind_x, ind_y, k):
-    fail = -1
+def faux(playBoard, ind_x, ind_y):
     newboard = playBoard
     
-    if k>=0:
-        if boundsFaux(ind_x, ind_y, newboard,1) == -1:
-            #print("0")
-            #print(vertex)
-            return fail
-        else:
-            newboard[ind_x][ind_y] = "*"
-            return newboard
+    if boundsFaux(ind_x, ind_y, newboard) == -1:
+        return -1
+    else:
+        newboard[ind_x][ind_y] = "*"
+        return newboard
         
 
+
+
 def generateboard():
-    ind_x = random.randrange(0,5)
-    ind_y = random.randrange(0,5)
+    iBoardD = boardDim-1
+    
+    ind_x = random.randrange(0,iBoardD)
+    ind_y = random.randrange(0,iBoardD)
     #print(ind_x, ind_y)
+    
+    #random var for board number
     num = random.randrange(0,1)
     #this chosenBoard var will be changed as the board is generated
-    #done to save the original chosen boards state in the allBoards list
-    chosenBoard = allBoards[num]
-    playBoard = chosenBoard
+    #done to save the original chosen boards state in the ALLBOARDS list
+    chosenBoard = deepcopy(ALLBOARDS[num])
+    playBoard = deepcopy(ALLBOARDS[num])
+    baseBoard = deepcopy(ALLBOARDS[num])
     #printBoard(playBoard)
-    # k == size of the box
-    k = 2
-    scissorsVar = scissors(playBoard, ind_x, ind_y, k)
+    # k == size of the box, not needed anymore, relic of older functions
+    #k = 2
+    scissorsVar = makeSci( ind_x, ind_y,playBoard)
     
     #iter checks to see if the board is correct
     iter = 0
+
     while iter == 0:
-        #-1 = vertex is equal to @
-        if scissorsVar == -1:
-            ind_x = random.randrange(0,5)
-            ind_y = random.randrange(0,5)
+        #-1 = vertex is not able to be placed
+        if type(scissorsVar) != list :
+
+            ind_x = random.randrange(0,iBoardD)
+            ind_y = random.randrange(0,iBoardD)
             #print(ind_x, ind_y)
-            vis = [[False for i in range(boardDim)] for j in range(boardDim)]
             
-            playBoard = chosenBoard
-            scissorsVar = scissors(playBoard, ind_x, ind_y, k)
+            #empty visited arr for next iter
+            
+            playBoard = deepcopy(chosenBoard)
+            scissorsVar = makeSci( ind_x, ind_y,playBoard)
         else:
             iter = 1
-    #reset iter and visited for the square
-    vis = [[False for i in range(boardDim)] for j in range(boardDim)]
+
+    #reset iter
     iter = 0
-    #playboard is now equal to the 
+    #playboard and chosenBoard is now equal to the board with scissors in it
     playBoard = scissorsVar
-    printBoard(playBoard)
-    ind_x = random.randrange(0,5)
-    ind_y = random.randrange(0,5)
-    squareVar = boundsPresent(playBoard, ind_x, ind_y,k)
+    chosenBoard = scissorsVar
+    if (testVar == 1):
+        printBoard(playBoard)
+    #creating random index for present
+    ind_x = random.randrange(0,iBoardD)
+    ind_y = random.randrange(0,iBoardD)
+    
+    squareVar = makePres(ind_x, ind_y,playBoard)
     while iter == 0:
         #-1 = vertex is equal to @
-        if squareVar == -1:
-            ind_x = random.randrange(0,5)
-            ind_y = random.randrange(0,5)
-            #print(ind_x, ind_y)
-            vis = [[False for i in range(boardDim)] for j in range(boardDim)]
+        if type(squareVar) != list :
             
-            playBoard = chosenBoard
-            squareVar = boundsPresent(playBoard, ind_x, ind_y, k)
+            ind_x = random.randrange(0,iBoardD)
+            ind_y = random.randrange(0,iBoardD)
+            #print(ind_x, ind_y)
+
+            
+            playBoard = deepcopy(chosenBoard)
+            squareVar = makePres(ind_x, ind_y,playBoard)
         else:
             iter = 1
-    #boardTest = allBoards[0]
-    #print(bounds(0, 0, boardTest), "HELP")
+    #playBoard and chosen baord set equal to the correct squareVar with present and scissors
+    playBoard = squareVar
+    chosenBoard = squareVar
     
-    #reset iter and vis one last time
-    vis = [[False for i in range(boardDim)] for j in range(boardDim)]
+    #reset iter one last time
     iter = 0
     #generate random index for the faux
     f_x = random.randrange(0,5)
     f_y = random.randrange(0,5)
+    
     #some format of the xxxVar to deliintate which iteration we are on and check if it correct and doable
-    fauxVar = faux(playBoard, f_x, f_y, k)
+    fauxVar = faux(playBoard, f_x, f_y)
+    
     while iter == 0:
-        if fauxVar == -1:
-            f_x = random.randrange(0,5)
-            f_y = random.randrange(0,5)
+        if type(fauxVar) != list:
+            f_x = random.randrange(0,iBoardD)
+            f_y = random.randrange(0,iBoardD)
+        
             
-            vis = [[False for i in range(boardDim)] for j in range(boardDim)]
-            
-            playBoard = chosenBoard
-            fauxVar = faux(playBoard, f_x, f_y, k)
+            playBoard = deepcopy(chosenBoard)
+            fauxVar = faux(playBoard, f_x, f_y)
         else:
             iter = 1
     #set the board the payer will be using to the one with all elements within it
     playBoard = fauxVar
     
     #test
-    printBoard(playBoard)
+
     
     #key is index 0, the base boards is index 1
     #so much typing of the word board...
-    boards = [playBoard, allBoards[num]]
+    
+    
+    boards = [playBoard, ALLBOARDS[num]]
     
     return boards
+
+
+'''
+if testVar == 1:
+    newBoard = []
+    newBoard = generateboard()
+
+    print(newBoard)
+
+    if(type(newBoard[0]) is int):
+        print(newBoard[0])
+    else:
+        printBoard(newBoard[0])
+    print("@@@@@@@@@@@@@@@@@\n")
+    printBoard(newBoard[1])
     
+'''
