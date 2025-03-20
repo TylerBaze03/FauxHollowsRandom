@@ -35,11 +35,11 @@ nonos = ['@', '#', '!']
 
 #dfs cords for scissors
 cordsRowS = [0,1,0,-1,0,2,0,-2]
-cordsColS = [-1,0,1,0,-2,0,2]
+cordsColS = [-1,0,1,0,-2,0,2,0]
 
 #dfs coords for present
-cordsRowP = [0,1,0,-1]
-cordsColP = [-1,0,1,0]
+cordsRowP = [0,1,0,-1,1,-1,1,-1]
+cordsColP = [-1,0,1,0,1,-1,-1,1]
 
 #shouldnt be used outside of testing this specific py file
 def printBoard(playBoard):
@@ -135,15 +135,88 @@ def dfs(x, y, playBoard, type):
     
     
     if type == 0:
-
+        while (len(st) > 0):
+            cur = st[len(st)-1]
+            st.remove(st[len(st)-1])
+            row = cur[0]
+            col = cur[1]
+            
+            if (isValid(row, col) == False):
+                return -1
+            
+            vis[row][col] = True
+            
+            for i in range(8):
+                adjx = row + cordsRowP[i]
+                adjy = col + cordsColP[i]
+                st.append([adjx, adjy])
         
         
     elif type == 1:
-        while len()
+        while (len(st) > 0):
+            cur = st[len(st)-1]
+            st.remove(st[len(st)-1])
+            row = cur[0]
+            col = cur[1]
+            
+            if (isValid(row, col) == False):
+                return -1
+            
+            vis[row][col] = True
+            
+            for i in range(4):
+                adjx = row + cordsRowP[i]
+                adjy = col + cordsColP[i]
+                st.append([adjx, adjy])
         
 
     else:
         return -1
+
+
+#indexes in the visited array around the vertex
+#todo: finish rest and test, this shoudl work i think
+
+#9  1  2 
+#8  0  3
+#7  6  4
+visitedPr = [False for i in range(9)]
+
+def makePres(x,y,playBoard):
+    vertex = playBoard[x][y]
+    if vertex in nonos:
+        return -1
+    else:
+        visitedPr[0] = True
+        
+    for i in range(cordsRowP):
+        if vertex in nonos:
+            visitedPr[i] = False
+        else:
+            visitedPr[0] = True
+    if(visitedPr[1] != False and visitedPr[2] != False and visitedPr[3] !=False):
+        playBoard[x][y] = "!"
+        playBoard[x-1][y]
+        playBoard[x-1][y+1]
+        playBoard[x][y+1]
+    elif(visitedPr[3] != False and visitedPr[4] != False and visitedPr[5] !=False):
+        playBoard[x][y]
+        playBoard[x][y+1]
+        playBoard[x+1][y+1]
+        playBoard[x+1][y]
+    elif(visitedPr[i] != False and visitedPr[i] != False and visitedPr[i] !=False):
+        playBoard[x][y]
+        playBoard[x][y]
+        playBoard[x][y]
+        playBoard[x][y]
+    elif(visitedPr[i] != False and visitedPr[i] != False and visitedPr[i] !=False):
+        playBoard[x][y]
+        playBoard[x][y]
+        playBoard[x][y]
+        playBoard[x][y]
+    else:
+        return -1
+
 
 def boundsScissors(x, y, playBoard):
     vertex = playBoard[x][y]
